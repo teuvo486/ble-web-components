@@ -5,10 +5,10 @@ const TEMPLATE_PATH = "templates/card.html";
 const ELEMENT_NAME = "ble-sensor-card";
 
 const MAX_RSSI = -22;
-const MIN_RSSI = -100;
+const MIN_RSSI = -120;
 const MAX_VOLTAGE = 3.646;
 const MIN_VOLTAGE = 1.6;
-const UPDATE_DELAY = 10;
+const UPDATE_DELAY = 8;
 
 class BLESensorCard extends HTMLDivElement {
     static async register() {
@@ -120,10 +120,17 @@ class BLESensorCard extends HTMLDivElement {
         let fract_str = "";
         
         if (val) {
-            let rounded = Math.round(val * 10) / 10;
+            let sign = Math.sign(val);
+            let rounded = Math.round(Math.abs(val) * 10) / 10;
             let int = Math.trunc(rounded);
             let fract = Math.round((rounded - int) * 10);
-            int_str = `${int}.`;
+            
+            if (sign == -1 || sign == -0) {
+                int_str = `-${int}.`;
+            } else {
+                int_str = `${int}.`;
+            }
+            
             fract_str = `${fract} °C`;
         }
         
