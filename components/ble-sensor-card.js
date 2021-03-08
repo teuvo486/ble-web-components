@@ -1,32 +1,27 @@
-import { fetchOne, registerTemplate } from "../util.js";
-
-const TEMPLATE_ID = "ble-sensor-card-template";
-const TEMPLATE_PATH = "templates/card.html";
 const ELEMENT_NAME = "ble-sensor-card";
-
 const MAX_RSSI = -22;
 const MIN_RSSI = -120;
 const MAX_VOLTAGE = 3.646;
 const MIN_VOLTAGE = 1.6;
 const UPDATE_DELAY = 8;
+const HOST = "192.168.2.231";
+const PORT = "5000";
 
 class BLESensorCard extends HTMLDivElement {
-    static async register() {
-        await registerTemplate(TEMPLATE_ID, TEMPLATE_PATH);        
+    static register() {
+        let template = document.createElement("template");
+        template.setAttribute("id", `${ELEMENT_NAME}-template`);
+        document.body.appendChild(template);
+        template.innerHTML = TEMPLATE_CONTENT;        
         customElements.define(ELEMENT_NAME, BLESensorCard, { extends: "div" });  
-    }
-    
-    static create(name) {
-        let card = document.createElement("div", { is: ELEMENT_NAME });
-        card.name = name;
-        return card;
     }
     
     constructor() {
         super();
+        this.name = this.getAttribute("name");
         this.setAttribute("class", "col-sm");
-        this.setAttribute("style", "max-width: 22rem; min-width: 19rem;");   
-        let template = document.getElementById(TEMPLATE_ID);
+        this.setAttribute("style", "max-width: 22rem; min-width: 19rem;");
+        let template = document.getElementById(`${ELEMENT_NAME}-template`);
         let shadow = this.attachShadow({ mode: "open" });              
         shadow.appendChild(template.content.cloneNode(true));
         let button = shadow.getElementById("collapse-button");
@@ -37,15 +32,30 @@ class BLESensorCard extends HTMLDivElement {
 
         this.intervalID = window.setInterval(() => {
             this.update()
-                .then(_ => { })
-                .catch(e => { console.log(e) });
+                .catch(e => { this.showError(e.message) });
         }, UPDATE_DELAY * 1000);
+        
+        this.clearError();
+    }
+
+    async fetch() {    
+        if (!this.name) {
+            throw new Error("Name not set!");
+        }
+        
+        let res = await fetch(`http://${HOST}:${PORT}/${this.name}`);
+          
+        if (res.ok) {
+            return await res.json();
+        } else {
+            throw new Error(`${res.status} ${res.statusText}`);
+        }
     }
     
     async update() {
         if (this.shadowRoot && this.isConnected) {
-            let dev = await fetchOne(this.name);
-            this.shadowRoot.getElementById("card-name").textContent = dev.name;
+            this.shadowRoot.getElementById("card-name").textContent = this.name;
+            let dev = await this.fetch();
             this.shadowRoot.getElementById("card-address").textContent = dev.address;
             this.updRSSI(dev.rssi);
             
@@ -56,19 +66,20 @@ class BLESensorCard extends HTMLDivElement {
                 this.updTemp(d.temperature);
                 this.updHum(d.humidity);
                 this.updDataList(d);
-            }     
+            }
+            
+            this.clearError();   
         } 
     }
 
     collapse() {
         let elem = this.shadowRoot.getElementById("collapse-element");
-        elem.hidden = !(elem.hidden);
+        elem.hidden = !elem.hidden;
     }
 
     connectedCallback() {
         this.update()
-            .then(_ => { })
-            .catch(err => { console.log(err) });
+            .catch(e => { this.showError(e.message) });
     }
 
     updRSSI(val) {
@@ -171,6 +182,58 @@ class BLESensorCard extends HTMLDivElement {
             }
         });
     }
+    
+    showError(msg) {
+        let error = this.shadowRoot.getElementById("error");
+        error.hidden = false;
+        error.textContent = msg;
+    }
+    
+    clearError() {
+        let error = this.shadowRoot.getElementById("error");
+        error.hidden = true;
+        error.textContent = null;
+    }
 }
+
+const TEMPLATE_CONTENT = `
+    <link href="bootstrap/bootstrap.min.css" rel="stylesheet" integrity="sha384-giJF6kkoqNQ00vy+HMDP7azOuL0xtbfIcaT9wjKHr8RbDVddVHyTfAAsrekwKmP1">
+    <div class="card text-dark bg-light">
+        <div class="card-header">
+            <div class="row justify-content-between">
+                <div class="col-auto mb-0 text-capitalize fw-bold" id="card-name"></div>
+                <div class="col-auto mb-0 text-muted" id="card-address"></div>
+            </div>
+            <hr class="my-2" />
+            <div class="row justify-content-between">
+                <div class="col-auto" id="card-rssi"></div>
+                <div class="col-auto" id="card-voltage"></div>
+                <div class="col-auto" id="card-time"></div>
+            </div>
+        </div>
+        <div class="card-body py-1">
+            <div class="alert alert-danger" id="error"></div>
+            <div class="row justify-content-evenly">
+                <div class="col-auto">
+                    <span class="fs-2" id="temp-int"></span>
+                    <span class="fs-5" id="temp-fract"></span>
+                </div>
+                <div class="col-auto">
+                    <span class="fs-2" id="hum-int"></span>
+                    <span class="fs-5" id="hum-fract"></span>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer">
+            <button class="btn btn-light btn-sm py-0 border" type="button" id="collapse-button">▼</button>
+            <div id="collapse-element" hidden>
+                <div class="card card-body mt-2" id="data-list">
+                </div>
+            </div>
+        </div>
+    </div>
+`;
+
+BLESensorCard.register();
 
 export default BLESensorCard;
