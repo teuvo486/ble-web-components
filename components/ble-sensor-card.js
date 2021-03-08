@@ -12,15 +12,16 @@ class BLESensorCard extends HTMLDivElement {
         let template = document.createElement("template");
         template.setAttribute("id", `${elementName}-template`);
         document.body.appendChild(template);
-        template.innerHTML = TEMPLATE_CONTENT;        
+        template.innerHTML = templateContent;        
         customElements.define(elementName, BLESensorCard, { extends: "div" });  
     }
     
     constructor() {
         super();
         this.name = this.getAttribute("name");
-        this.host = this.getAttribute("host") || defaultHost;
+        this.host = this.getAttribute("host") || document.location.hostname || defaultHost;
         this.port = this.getAttribute("port") || defaultPort;
+        console.log(this.host);
         this.setAttribute("class", "col-sm");
         this.setAttribute("style", "max-width: 22rem; min-width: 19rem;");
         let template = document.getElementById(`${elementName}-template`);
@@ -198,7 +199,7 @@ class BLESensorCard extends HTMLDivElement {
     }
 }
 
-const TEMPLATE_CONTENT = `
+const templateContent = `
     <link href="bootstrap/bootstrap.min.css" rel="stylesheet" integrity="sha384-giJF6kkoqNQ00vy+HMDP7azOuL0xtbfIcaT9wjKHr8RbDVddVHyTfAAsrekwKmP1">
     <div class="card text-dark bg-light">
         <div class="card-header">
@@ -211,7 +212,7 @@ const TEMPLATE_CONTENT = `
                 <div class="col-auto" id="card-rssi"></div>
                 <div class="col-auto" id="card-voltage"></div>
                 <div class="col-auto" id="card-time"></div>
-                <div class="alert alert-danger" id="error"></div>
+                <div class="alert alert-danger mb-0" id="error"></div>
             </div>
         </div>
         <div class="card-body py-1">
