@@ -3,9 +3,8 @@ const maxRSSI = -22;
 const minRSSI = -120;
 const maxVoltage = 3.646;
 const minVoltage = 1.6;
-const updateDelay = 8;
-const defaultHost = "127.0.0.1";
 const defaultPort = "5000";
+const defaultDelay = 8;
 
 class BLESensorCard extends HTMLDivElement {
     static register() {
@@ -19,9 +18,9 @@ class BLESensorCard extends HTMLDivElement {
     constructor() {
         super();
         this.name = this.getAttribute("name");
-        this.host = this.getAttribute("host") || document.location.hostname || defaultHost;
+        this.host = this.getAttribute("host") || document.location.hostname;
         this.port = this.getAttribute("port") || defaultPort;
-        console.log(this.host);
+        this.delay = (this.getAttribute("delay") || defaultDelay) * 1000;
         this.setAttribute("class", "col-sm");
         this.setAttribute("style", "max-width: 22rem; min-width: 19rem;");
         let template = document.getElementById(`${elementName}-template`);
@@ -32,13 +31,24 @@ class BLESensorCard extends HTMLDivElement {
         button.onclick = () => {
             this.collapse();
         };        
-
+        
+        this.clearError();
+    }
+    
+    connectedCallback() {
+        this.update()
+            .catch(e => { this.showError(e.message) });
+        
         this.intervalID = window.setInterval(() => {
             this.update()
                 .catch(e => { this.showError(e.message) });
-        }, updateDelay * 1000);
-        
-        this.clearError();
+        }, this.delay);
+    }
+    
+    disconnectedCallback() {
+        if (this.intervalID) {
+            window.clearInterval(this.intervalId);
+        }
     }
 
     async fetch() {    
@@ -78,11 +88,6 @@ class BLESensorCard extends HTMLDivElement {
     collapse() {
         let elem = this.shadowRoot.getElementById("collapse-element");
         elem.hidden = !elem.hidden;
-    }
-
-    connectedCallback() {
-        this.update()
-            .catch(e => { this.showError(e.message) });
     }
 
     updRSSI(val) {
