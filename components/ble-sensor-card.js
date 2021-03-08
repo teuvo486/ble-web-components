@@ -1,27 +1,29 @@
-const ELEMENT_NAME = "ble-sensor-card";
-const MAX_RSSI = -22;
-const MIN_RSSI = -120;
-const MAX_VOLTAGE = 3.646;
-const MIN_VOLTAGE = 1.6;
-const UPDATE_DELAY = 8;
-const HOST = "192.168.2.231";
-const PORT = "5000";
+const elementName = "ble-sensor-card";
+const maxRSSI = -22;
+const minRSSI = -120;
+const maxVoltage = 3.646;
+const minVoltage = 1.6;
+const updateDelay = 8;
+const defaultHost = "127.0.0.1";
+const defaultPort = "5000";
 
 class BLESensorCard extends HTMLDivElement {
     static register() {
         let template = document.createElement("template");
-        template.setAttribute("id", `${ELEMENT_NAME}-template`);
+        template.setAttribute("id", `${elementName}-template`);
         document.body.appendChild(template);
         template.innerHTML = TEMPLATE_CONTENT;        
-        customElements.define(ELEMENT_NAME, BLESensorCard, { extends: "div" });  
+        customElements.define(elementName, BLESensorCard, { extends: "div" });  
     }
     
     constructor() {
         super();
         this.name = this.getAttribute("name");
+        this.host = this.getAttribute("host") || defaultHost;
+        this.port = this.getAttribute("port") || defaultPort;
         this.setAttribute("class", "col-sm");
         this.setAttribute("style", "max-width: 22rem; min-width: 19rem;");
-        let template = document.getElementById(`${ELEMENT_NAME}-template`);
+        let template = document.getElementById(`${elementName}-template`);
         let shadow = this.attachShadow({ mode: "open" });              
         shadow.appendChild(template.content.cloneNode(true));
         let button = shadow.getElementById("collapse-button");
@@ -33,17 +35,13 @@ class BLESensorCard extends HTMLDivElement {
         this.intervalID = window.setInterval(() => {
             this.update()
                 .catch(e => { this.showError(e.message) });
-        }, UPDATE_DELAY * 1000);
+        }, updateDelay * 1000);
         
         this.clearError();
     }
 
     async fetch() {    
-        if (!this.name) {
-            throw new Error("Name not set!");
-        }
-        
-        let res = await fetch(`http://${HOST}:${PORT}/${this.name}`);
+        let res = await fetch(`http://${this.host}:${this.port}/${this.name}`);
           
         if (res.ok) {
             return await res.json();
@@ -53,14 +51,18 @@ class BLESensorCard extends HTMLDivElement {
     }
     
     async update() {
+        if (!this.name) {
+            throw new Error("Name not set!");
+        }
+    
         if (this.shadowRoot && this.isConnected) {
             this.shadowRoot.getElementById("card-name").textContent = this.name;
             let dev = await this.fetch();
             this.shadowRoot.getElementById("card-address").textContent = dev.address;
             this.updRSSI(dev.rssi);
             
-            if (dev.sensor_data) {
-                let d = dev.sensor_data;
+            if (dev.sensorData) {
+                let d = dev.sensorData;
                 this.updVoltage(d.voltage);
                 this.updTime(d.time);
                 this.updTemp(d.temperature);
@@ -86,7 +88,7 @@ class BLESensorCard extends HTMLDivElement {
         let str = "📶 ❌️";
         
         if (val) {
-            let perc = Math.round((val - MIN_RSSI) / (MAX_RSSI - MIN_RSSI) * 100);
+            let perc = Math.round((val - minRSSI) / (maxRSSI - minRSSI) * 100);
             str = `📶 ${perc} %`;
         }
         
@@ -97,7 +99,7 @@ class BLESensorCard extends HTMLDivElement {
         let str = "";
         
         if (val) {
-            let perc = Math.round((val - MIN_VOLTAGE) / (MAX_VOLTAGE - MIN_VOLTAGE) * 100);
+            let perc = Math.round((val - minVoltage) / (maxVoltage - minVoltage) * 100);
             str = `🔋 ${perc} %`;
         }
         
@@ -209,10 +211,10 @@ const TEMPLATE_CONTENT = `
                 <div class="col-auto" id="card-rssi"></div>
                 <div class="col-auto" id="card-voltage"></div>
                 <div class="col-auto" id="card-time"></div>
+                <div class="alert alert-danger" id="error"></div>
             </div>
         </div>
         <div class="card-body py-1">
-            <div class="alert alert-danger" id="error"></div>
             <div class="row justify-content-evenly">
                 <div class="col-auto">
                     <span class="fs-2" id="temp-int"></span>
