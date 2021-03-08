@@ -47,7 +47,7 @@ class BLESensorCard extends HTMLDivElement {
     
     disconnectedCallback() {
         if (this.intervalID) {
-            window.clearInterval(this.intervalId);
+            window.clearInterval(this.intervalID);
         }
     }
 
