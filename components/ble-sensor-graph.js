@@ -6,7 +6,6 @@ const defaultMarginY = 30;
 const hour = 3600 * 1000;
 const day = hour * 24;
 const week = day * 7;
-const month = day * 4;
 
 class BLESensorGraph extends HTMLDivElement {
     static register() {
