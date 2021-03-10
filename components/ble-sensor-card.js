@@ -217,10 +217,10 @@ const templateContent = `
                 <div class="col-auto" id="card-rssi"></div>
                 <div class="col-auto" id="card-voltage"></div>
                 <div class="col-auto" id="card-time"></div>
-                <div class="alert alert-danger mb-0" id="error"></div>
             </div>
         </div>
         <div class="card-body py-1">
+            <div class="alert alert-danger mb-0" id="error"></div>
             <div class="row justify-content-evenly">
                 <div class="col-auto">
                     <span class="fs-2" id="temp-int"></span>
