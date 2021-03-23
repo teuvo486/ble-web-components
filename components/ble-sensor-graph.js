@@ -1,6 +1,6 @@
 const elementName = "ble-sensor-graph";
 const defaultPort = "5000";
-const defaultMarginX = 35;
+const defaultMarginX = 40;
 const defaultMarginY = 30;
 const hour = 3600 * 1000;
 const day = hour * 24;
@@ -88,12 +88,58 @@ class BLESensorGraph extends HTMLDivElement {
     }
 
     updateProps1() {
-        this.interval = this.getAttribute("interval") || "day";
-        this.col = this.getAttribute("col") || "temperature";
         this.maxX = this.canvas.width - this.minX;
         this.maxY = this.canvas.height - this.minY;
         this.rngX = this.maxX - this.minX;
         this.rngY = this.maxY - this.minY;
+        this.updateInterval();
+        this.col = this.getAttribute("col") || "temperature";
+        this.unit = units[this.col];
+    }
+
+    async fetch() {
+        if (!this.name || !this.host || !this.port || !this.minT || !this.maxT || !this.col) {
+            throw new Error("Required props not set!");
+        }
+        
+        let start = new Date(this.minT).toISOString();
+        let end = new Date(this.maxT).toISOString();
+        let res = await fetch(`http://${this.host}:${this.port}/${this.name}?start=${start}&end=${end}&columns=${this.col}`);
+         
+        if (res.ok) {
+            return await res.json();
+        } else {
+            throw new Error(`${res.status} ${res.statusText}`);
+        }
+    }
+
+    updateProps2(data) {
+        let minV = data[0][this.col];
+        let maxV = minV;
+        
+        data.forEach(d => {
+            if (d[this.col] < minV) {
+                minV = d[this.col];
+            } else if (d[this.col] > maxV) {
+                maxV = d[this.col];
+            }
+        });
+        
+        this.maxV = Math.ceil(maxV);
+        this.minV = Math.floor(minV);
+        this.rngV = this.maxV - this.minV;
+        
+        if (this.rngV >= 5) {
+            this.stepV = Math.round(this.rngV / 5);
+        } else if (this.rngV >= 1) {
+            this.stepV = 1;
+        } else {
+            this.stepV = 0.2;
+        }
+    }
+
+    updateInterval() {
+        this.interval = this.getAttribute("interval") || "day";
         this.maxT = Date.now();
         
         switch (this.interval) {
@@ -129,43 +175,8 @@ class BLESensorGraph extends HTMLDivElement {
                 throw new Error("Invalid interval!");
         }
         
-        this.rngT = this.maxT - this.minT;
-    }
-
-    async fetch() {
-        if (!this.name || !this.host || !this.port || !this.minT || !this.maxT || !this.col) {
-            throw new Error("Required props not set!");
-        }
-        
-        let start = new Date(this.minT).toISOString();
-        let end = new Date(this.maxT).toISOString();
-        
-        let res = await fetch(`http://${this.host}:${this.port}/${this.name}?start=${start}&end=${end}&column=${this.col}`);
-         
-        if (res.ok) {
-            return await res.json();
-        } else {
-            throw new Error(`${res.status} ${res.statusText}`);
-        }
-    }
-
-    updateProps2(data) {
-        let minV = data[0][this.col];
-        let maxV = minV;
-        
-        data.forEach(d => {
-            if (d[this.col] < minV) {
-                minV = d[this.col];
-            } else if (d[this.col] > maxV) {
-                maxV = d[this.col];
-            }
-        });
-        
-        this.maxV = Math.ceil(maxV);
-        this.minV = Math.floor(minV);
-        this.rngV = this.maxV - this.minV;
-        this.stepV = Math.round(this.rngV / 5);
-    }
+        this.rngT = this.maxT - this.minT;       
+    }    
     
     drawGrid() {
         this.ctx.lineWidth = 1;
@@ -174,7 +185,7 @@ class BLESensorGraph extends HTMLDivElement {
         this.ctx.fillStyle = "lightcyan";
         this.ctx.fillRect(this.minX, this.minY, this.rngX, this.rngY);
         this.ctx.beginPath();
-        this.label("°C", this.minX - 12, this.minY - 20);
+        this.label(this.unit, this.minX / 2, this.minY / 2);
         
         for (let y = this.minV; y <= this.maxV; y += this.stepV) {
             this.hLine(y);
@@ -216,14 +227,14 @@ class BLESensorGraph extends HTMLDivElement {
         this.ctx.moveTo(x, this.minY);
         this.ctx.lineTo(x, this.maxY);
         let text = this.timeLabelFunc(v);
-        this.label(text, x, this.maxY + 20);
+        this.label(text, x, this.maxY + this.minY * 0.70);
     }
 
     hLine(v) {
         let y = this.calculateY(v);
         this.ctx.moveTo(this.minX, y);
         this.ctx.lineTo(this.maxX, y);
-        this.label(v, this.minX - 20, y);
+        this.label(v, this.minX / 2, y);
     }
 
     label(text, x, y) {
@@ -281,6 +292,19 @@ const templateContent = `
         </div>
     </div>
 `;
+
+const units = {
+    temperature: "°C",
+    humidity: "%RH",
+    pressure: "Pa",
+    accelerationX: "g",
+    accelerationY: "g",
+    accelerationZ: "g",
+    voltage: "V",
+    txPower: "dB",
+    movementCounter: "",
+    measurementSequence: "",
+}
 
 BLESensorGraph.register();
 
