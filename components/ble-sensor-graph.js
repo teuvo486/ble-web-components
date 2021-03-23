@@ -5,7 +5,7 @@ const defaultMarginY = 30;
 const hour = 3600 * 1000;
 const day = hour * 24;
 const week = day * 7;
-const month = day * 31;
+const month = day * 30;
 const year = day * 365;
 
 class BLESensorGraph extends HTMLDivElement {
@@ -36,8 +36,7 @@ class BLESensorGraph extends HTMLDivElement {
         this.ctx = this.canvas.getContext("2d");
         this.ctx.lineJoin = "bevel";
         this.minX = defaultMarginX;
-        this.minY = defaultMarginY;
-        
+        this.minY = defaultMarginY;        
         let select1 = this.shadowRoot.getElementById("interval-select");
 
         select1.addEventListener('change', (event) => {
@@ -94,7 +93,7 @@ class BLESensorGraph extends HTMLDivElement {
         this.rngY = this.maxY - this.minY;
         this.updateInterval();
         this.col = this.getAttribute("col") || "temperature";
-        this.unit = units[this.col];
+        this.unit = units[this.col] || "";
     }
 
     async fetch() {
@@ -132,10 +131,11 @@ class BLESensorGraph extends HTMLDivElement {
         if (this.rngV >= 5) {
             this.stepV = Math.round(this.rngV / 5);
         } else if (this.rngV >= 1) {
-            this.stepV = 1;
+            this.stepV = 0.25
         } else {
-            this.stepV = 0.2;
-        }
+            this.rngV = 1;
+            this.stepV = 0.125
+        }     
     }
 
     updateInterval() {
@@ -175,7 +175,9 @@ class BLESensorGraph extends HTMLDivElement {
                 throw new Error("Invalid interval!");
         }
         
-        this.rngT = this.maxT - this.minT;       
+        this.rngT = this.maxT - this.minT;
+        
+
     }    
     
     drawGrid() {
@@ -302,8 +304,6 @@ const units = {
     accelerationZ: "g",
     voltage: "V",
     txPower: "dB",
-    movementCounter: "",
-    measurementSequence: "",
 }
 
 BLESensorGraph.register();
