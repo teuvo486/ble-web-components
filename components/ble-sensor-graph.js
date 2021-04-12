@@ -199,6 +199,15 @@ class BLESensorGraph extends HTMLDivElement {
         }
         
         this.ctx.stroke();
+        
+        if (this.minV < 0 && 0 < this.maxV) {
+            this.ctx.beginPath();
+            let y = this.calculateY(0);
+            this.ctx.strokeStyle = "darkgray";
+            this.ctx.moveTo(this.minX, y);
+            this.ctx.lineTo(this.maxX, y);
+            this.ctx.stroke();
+        }
     }
     
     drawGraph(data) {
