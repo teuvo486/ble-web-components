@@ -1,6 +1,6 @@
 const elementName = "ble-sensor-card";
 const maxRSSI = -22;
-const minRSSI = -120;
+const minRSSI = -100;
 const maxVoltage = 3.646;
 const minVoltage = 1.6;
 const defaultPort = "5000";
@@ -17,16 +17,18 @@ class BLESensorCard extends HTMLDivElement {
     
     constructor() {
         super();
+        
         this.name = this.getAttribute("name");
         this.host = this.getAttribute("host") || document.location.hostname;
         this.port = this.getAttribute("port") || defaultPort;
         this.delay = (this.getAttribute("delay") || defaultDelay) * 1000;
         this.setAttribute("class", "col-sm");
         this.setAttribute("style", "max-width: 22rem; min-width: 19rem;");
+        
         let template = document.getElementById(`${elementName}-template`);
-        let shadow = this.attachShadow({ mode: "open" });              
-        shadow.appendChild(template.content.cloneNode(true));
-        let button = shadow.getElementById("collapse-button");
+        this.attachShadow({ mode: "open" });              
+        this.shadowRoot.appendChild(template.content.cloneNode(true));
+        let button = this.shadowRoot.getElementById("collapse-button");
         
         button.onclick = () => {
             this.collapse();
@@ -35,13 +37,11 @@ class BLESensorCard extends HTMLDivElement {
         this.clearError();
     }
     
-    connectedCallback() {
-        this.update()
-            .catch(e => { this.showError(e.message) });
+    async connectedCallback() {
+        await this.update();
         
-        this.intervalID = window.setInterval(() => {
-            this.update()
-                .catch(e => { this.showError(e.message) });
+        this.intervalID = window.setInterval(async () => {
+           await this.update();
         }, this.delay);
     }
     
@@ -62,26 +62,30 @@ class BLESensorCard extends HTMLDivElement {
     }
     
     async update() {
-        if (!this.name) {
-            throw new Error("Name not set!");
-        }
-    
-        if (this.shadowRoot && this.isConnected) {
-            this.shadowRoot.getElementById("card-name").textContent = this.name;
-            let dev = await this.fetch();
-            this.shadowRoot.getElementById("card-address").textContent = dev.address;
-            this.updRSSI(dev.rssi);
-            
-            if (dev.sensorData) {
-                let d = dev.sensorData;
-                this.updVoltage(d.voltage);
-                this.updTime(d.time);
-                this.updTemp(d.temperature);
-                this.updHum(d.humidity);
-                this.updDataList(d);
+        try {
+            if (!this.name) {
+                throw new Error("Name not set!");
             }
-            
-            this.clearError();   
+        
+            if (this.shadowRoot && this.isConnected) {
+                this.shadowRoot.getElementById("card-name").textContent = this.name;
+                let dev = await this.fetch();
+                this.shadowRoot.getElementById("card-address").textContent = dev.address;
+                this.updRSSI(dev.rssi);
+                
+                if (dev.sensorData) {
+                    let d = dev.sensorData;
+                    this.updVoltage(d.voltage);
+                    this.updTime(d.time);
+                    this.updTemp(d.temperature);
+                    this.updHum(d.humidity);
+                    this.updDataList(d);
+                }
+                
+                this.clearError();   
+            }
+        } catch (e) {
+            this.showError(e.message);
         } 
     }
 
