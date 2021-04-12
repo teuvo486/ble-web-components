@@ -1,5 +1,7 @@
 const elementName = "ble-sensor-graph";
 const defaultPort = "5000";
+const defaultWidth = 800;
+const defaultHeight = 300;
 const defaultMarginX = 40;
 const defaultMarginY = 30;
 const hour = 3600 * 1000;
@@ -23,20 +25,27 @@ class BLESensorGraph extends HTMLDivElement {
     
     constructor() {
         super();
+        
         this.name = this.getAttribute("name");
         this.host = this.getAttribute("host") || document.location.hostname;
         this.port = this.getAttribute("port") || defaultPort;
         this.locale = this.getAttribute("locale") || [];
-        let template = document.getElementById(`${elementName}-template`);
-        let shadow = this.attachShadow({ mode: "open" });
-        shadow.appendChild(template.content.cloneNode(true));
-        this.shadowRoot.getElementById("graph-name").textContent = this.name;
+        this.width = this.getAttribute("width") || defaultWidth;
+        this.height = this.getAttribute("height") || defaultHeight;
         this.setAttribute("class", "col-auto");
-        this.canvas = this.shadowRoot.getElementById("canvas");
-        this.ctx = this.canvas.getContext("2d");
-        this.ctx.lineJoin = "bevel";
         this.minX = defaultMarginX;
         this.minY = defaultMarginY;        
+        
+        let template = document.getElementById(`${elementName}-template`);
+        this.attachShadow({ mode: "open" });
+        this.shadowRoot.appendChild(template.content.cloneNode(true));
+        this.shadowRoot.getElementById("graph-name").textContent = this.name;        
+        this.canvas = this.shadowRoot.getElementById("canvas");
+        this.canvas.setAttribute("width", this.width);
+        this.canvas.setAttribute("height", this.height);        
+        this.ctx = this.canvas.getContext("2d");
+        this.ctx.lineJoin = "bevel";
+        
         let select1 = this.shadowRoot.getElementById("interval-select");
 
         select1.addEventListener('change', (event) => {
@@ -203,7 +212,7 @@ class BLESensorGraph extends HTMLDivElement {
         if (this.minV < 0 && 0 < this.maxV) {
             this.ctx.beginPath();
             let y = this.calculateY(0);
-            this.ctx.strokeStyle = "darkgray";
+            this.ctx.strokeStyle = "lightgray";
             this.ctx.moveTo(this.minX, y);
             this.ctx.lineTo(this.maxX, y);
             this.ctx.stroke();
@@ -298,7 +307,7 @@ const templateContent = `
         </div>
         <div class="card-body px-1 py-1">
             <div class="alert alert-danger mb-0" id="error"></div>
-            <canvas id="canvas" width=800 height=300></canvas>
+            <canvas id="canvas"></canvas>
         </div>
     </div>
 `;
