@@ -117,11 +117,8 @@ class BLESensorGraph extends HTMLDivElement {
         let maxV = minV;
         
         data.forEach(d => {
-            if (d[this.col] < minV) {
-                minV = d[this.col];
-            } else if (d[this.col] > maxV) {
-                maxV = d[this.col];
-            }
+            minV = Math.min(minV, d[this.col]);
+            maxV = Math.max(maxV, d[this.col]);
         });
         
         this.maxV = Math.ceil(maxV);
@@ -130,12 +127,13 @@ class BLESensorGraph extends HTMLDivElement {
         
         if (this.rngV >= 5) {
             this.stepV = Math.round(this.rngV / 5);
-        } else if (this.rngV >= 1) {
-            this.stepV = 0.25
+        } else if (this.rngV > 1) {
+            this.stepV = Math.round(this.rngV / 5 * 10) / 10;
         } else {
             this.rngV = 1;
-            this.stepV = 0.125
-        }     
+            this.maxV = this.minV + 1;
+            this.stepV = 0.2;
+        }
     }
 
     updateInterval() {
@@ -188,9 +186,10 @@ class BLESensorGraph extends HTMLDivElement {
         this.ctx.fillRect(this.minX, this.minY, this.rngX, this.rngY);
         this.ctx.beginPath();
         this.label(this.unit, this.minX / 2, this.minY / 2);
-        
+       
         for (let y = this.minV; y <= this.maxV; y += this.stepV) {
-            this.hLine(y);
+            let ry = Math.round(y * 10) / 10;
+            this.hLine(ry);
         }
 
         this.ctx.stroke();
